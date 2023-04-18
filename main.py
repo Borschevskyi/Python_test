@@ -1,43 +1,40 @@
-from flask import Flask, request, session, redirect, url_for, render_template
-from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required
 
+from flask import Flask, request, session, redirect, url_for, render_template
+from flask_sqlalchemy import SQLAlchemy
+from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+from flask_wtf import FlaskForm
+from wtforms import StringField, PasswordField, SubmitField, validators
+from wtforms.validators import DataRequired, EqualTo
+from werkzeug.security import generate_password_hash, check_password_hash
+
+app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
+db = SQLAlchemy(app)
+
+users = {'admin': {'password': 'admin'}
+         }
+
+
+
+class RegistrationForm(FlaskForm):
+    username = StringField('Username', validators=[DataRequired()])
+    password = PasswordField('Password', validators=[DataRequired(), EqualTo('confirm_password')])
+    confirm_password = PasswordField('Confirm Password', validators=[DataRequired()])
+    submit = SubmitField('Register')
+    
+class User(db.Model, UserMixin):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(50), unique=True, nullable=False)
+    password = db.Column(db.String(255), nullable=False)
+
+    def is_active(self):
+        return True
 
 login_manager = LoginManager()
-app = Flask(__name__)
 
 login_manager.init_app(app)
 
-# class Human:
-#     # инициализация
-#     def __init__(self, height=165, weight=76):
-#         # property
-#         self.height = height
-#         self.weight = weight
-#
-#     def get_height_weight(self):
-#         return f"Your height is {self.height} and your weight is {self.weight}"
-#
-#
-# man = Human()
-# print(man.height, man.weight, man.get_height_weight())
-#
-#
-# class Rider(Human):
-#     pass
-#
-#
-# rider = Rider()
-# print(rider)
-# Set the secret key to some random bytes. Keep this really secret!
-# Set the secret key to some random bytes. Keep this really secret!
-
 app.secret_key = b'_5#y2L"F4Q8z\n\xec]/'
-
-class User(UserMixin):
-    pass
-
-users = {'admin': {'password': 'admin'}}
-
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -69,6 +66,18 @@ def login():
             return render_template('login.html', error='Incorrect username or password')
 
     return render_template('login.html')
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    form = RegistrationForm()
+    if form.validate_on_submit():
+        username = form.username.data
+        password = generate_password_hash(form.password.data)
+        user = User(username=username, password=password)
+        db.session.add(user)
+        db.session.commit()
+        return redirect(url_for('login'))
+    return render_template('register.html', form=form)
 
 
 @app.route('/logout')
