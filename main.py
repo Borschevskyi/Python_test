@@ -15,11 +15,13 @@ migrate = Migrate(app, db)
 
 users = {}
 
+
 class RegistrationForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired()])
     password = PasswordField('Password', validators=[DataRequired(), EqualTo('confirm_password')])
     confirm_password = PasswordField('Confirm Password', validators=[DataRequired()])
     submit = SubmitField('Register')
+
 
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
@@ -32,11 +34,13 @@ class User(db.Model, UserMixin):
     def get_id(self):
         return str(self.id)
 
+
 login_manager = LoginManager()
 
 login_manager.init_app(app)
 
 app.secret_key = b'_5#y2L"F4Q8z\n\xec]/'
+
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -44,15 +48,18 @@ def load_user(user_id):
     user.id = user_id
     return user
 
+
 @app.before_first_request
 def create_tables():
     db.create_all()
+
 
 @app.route('/')
 def index():
     if 'username' in session:
         return f'Logged in as {session["username"]}<br><a href="/logout">Logout</a>'
     return 'You are not logged in<br><a href="/login">Login</a>'
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -69,6 +76,7 @@ def login():
             return render_template('login.html', error='Incorrect username or password')
     return render_template('login.html')
 
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     form = RegistrationForm()
@@ -84,16 +92,19 @@ def register():
         return redirect(url_for('login'))
     return render_template('register.html', form=form)
 
+
 @app.route('/logout')
 def logout():
     session.pop('username', None)
     logout_user()
     return redirect(url_for('index'))
 
+
 @app.route('/profile')
 @login_required
 def profile():
     return f'Hello, {current_user.id}!'
+
 
 if __name__ == '__main__':
     app.run(host="localhost", port="8000", debug=True)
